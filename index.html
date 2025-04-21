@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>拼图小游戏 · 致我最爱的你</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background: #fff0f5;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      h1 {
+        margin-top: 30px;
+        color: #e91e63;
+      }
+      #puzzle {
+        display: grid;
+        grid-template-columns: repeat(3, 100px);
+        grid-template-rows: repeat(3, 100px);
+        gap: 2px;
+        margin-top: 20px;
+        cursor: pointer;
+      }
+      .tile {
+        width: 100px;
+        height: 100px;
+        background-image: url("./myLove.png"); /* 替换为你们的合照 */
+        background-size: 300px 300px;
+        border-radius: 5px;
+        transition: 0.2s;
+      }
+      .hidden {
+        visibility: hidden;
+      }
+      #message {
+        display: none;
+        margin-top: 30px;
+        font-size: 20px;
+        color: #333;
+        text-align: center;
+      }
+      #confetti {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>上一世我被奸人所害，这一世靠拼图修炼功德，等满级就带你飞升！🧩</h1>
+    <div id="puzzle"></div>
+    <div id="message">
+      <p>
+        我真的不是故意的，是时空乱流把我传送错位了 😢<br />
+        现在拼图恢复稳定，我的脑子也同步回来了 🧠<br />
+        你要不要过来验收一下修复结果～
+      </p>
+      <audio id="bgm" autoplay loop>
+        <source src="audio.mp3" type="audio/mpeg" />
+        你的浏览器不支持播放音乐。
+      </audio>
+    </div>
+    <canvas id="confetti"></canvas>
+
+    <script>
+      const puzzle = document.getElementById("puzzle");
+      const message = document.getElementById("message");
+
+      const size = 3;
+      let tiles = [];
+
+      function createPuzzle() {
+        const positions = [...Array(size * size).keys()];
+        do {
+          positions.sort(() => Math.random() - 0.5);
+        } while (!isSolvable(positions));
+
+        tiles = [];
+
+        positions.forEach((pos) => {
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          if (pos === size * size - 1) tile.classList.add("hidden");
+          tile.style.backgroundPosition = `-${(pos % size) * 100}px -${Math.floor(pos / size) * 100}px`;
+          tile.dataset.correct = pos;
+          tiles.push(tile);
+        });
+
+        updatePuzzle(); // 第一次渲染
+      }
+
+      function moveTile(index) {
+        const emptyIndex = tiles.findIndex((t) => t.classList.contains("hidden"));
+
+        const x1 = index % size;
+        const y1 = Math.floor(index / size);
+        const x2 = emptyIndex % size;
+        const y2 = Math.floor(emptyIndex / size);
+
+        const isAdjacent = Math.abs(x1 - x2) + Math.abs(y1 - y2) === 1;
+
+        if (isAdjacent) {
+          [tiles[emptyIndex], tiles[index]] = [tiles[index], tiles[emptyIndex]];
+          updatePuzzle();
+          checkWin();
+        }
+      }
+
+      function updatePuzzle() {
+        puzzle.innerHTML = "";
+        tiles.forEach((tile, i) => {
+          tile.dataset.index = i;
+          tile.onclick = () => moveTile(i); // 重新绑定点击事件
+          puzzle.appendChild(tile);
+        });
+      }
+
+      function checkWin() {
+        const isWin = tiles.every((tile, i) => +tile.dataset.correct === i);
+        if (isWin) {
+          message.style.display = "block";
+          startConfetti();
+        }
+      }
+
+      function isSolvable(arr) {
+        let inv = 0;
+        for (let i = 0; i < arr.length; i++) {
+          for (let j = i + 1; j < arr.length; j++) {
+            if (arr[i] !== arr.length - 1 && arr[j] !== arr.length - 1 && arr[i] > arr[j]) inv++;
+          }
+        }
+        return inv % 2 === 0;
+      }
+
+      // ✨ 彩带动画
+      const canvas = document.getElementById("confetti");
+      const ctx = canvas.getContext("2d");
+      let particles = [];
+
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function createConfetti() {
+        for (let i = 0; i < 150; i++) {
+          particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            r: Math.random() * 6 + 2,
+            d: Math.random() * 150,
+            color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+            tilt: Math.random() * 10 - 10,
+          });
+        }
+      }
+
+      function drawConfetti() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+          p.y += Math.cos(p.d) + 1 + p.r / 2;
+          p.x += Math.sin(p.d);
+          if (p.y > canvas.height) {
+            p.x = Math.random() * canvas.width;
+            p.y = -10;
+          }
+        }
+      }
+
+      function startConfetti() {
+        resizeCanvas();
+        createConfetti();
+        setInterval(drawConfetti, 20);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+
+      // 初始化
+      createPuzzle();
+    </script>
+  </body>
+</html>
